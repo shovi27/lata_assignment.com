@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lata-maruti.com — Maruti Suzuki Regional Sales Dashboard FY 2024-25</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --card: #1c2128;
+    --border: #30363d;
+    --accent: #e8473f;
+    --accent2: #f7941d;
+    --accent3: #00c9a7;
+    --accent4: #4d8ef0;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --north: #4d8ef0;
+    --south: #00c9a7;
+    --west: #f7941d;
+    --east: #e8473f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
+    border-bottom: 2px solid var(--accent);
+    padding: 14px 28px;
+    display: flex; align-items:center; justify-content:space-between;
+  }
+  .logo-block { display:flex; align-items:center; gap:14px; }
+  .logo-circle {
+    width:42px; height:42px; border-radius:50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Rajdhani',sans-serif; font-weight:700; font-size:15px; color:white;
+  }
+  .header-title { font-family:'Rajdhani',sans-serif; }
+  .header-title h1 { font-size:20px; font-weight:700; color:var(--text); letter-spacing:1px; }
+  .header-title p { font-size:11px; color:var(--muted); margin-top:1px; }
+  .header-right { display:flex; align-items:center; gap:20px; }
+  .live-badge {
+    display:flex; align-items:center; gap:6px;
+    background:#1c2128; border:1px solid #30363d; border-radius:20px; padding:4px 12px;
+    font-size:11px; color:var(--accent3);
+  }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--accent3); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .fy-badge { font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; color:var(--accent2); }
+
+  /* FILTERS */
+  .filters {
+    background:var(--panel); border-bottom:1px solid var(--border);
+    padding:10px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .filter-label { font-size:11px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
+  .filter-group { display:flex; align-items:center; gap:8px; }
+  select {
+    background:#0d1117; border:1px solid var(--border); color:var(--text);
+    font-family:'Inter',sans-serif; font-size:12px;
+    padding:5px 10px; border-radius:6px; cursor:pointer; outline:none;
+    transition: border-color .2s;
+  }
+  select:focus { border-color:var(--accent); }
+  .btn-reset {
+    background:var(--accent); color:white; border:none; padding:5px 14px;
+    border-radius:6px; font-size:12px; font-family:'Inter',sans-serif;
+    cursor:pointer; font-weight:500; transition:opacity .2s;
+  }
+  .btn-reset:hover { opacity:.8; }
+
+  /* KPI STRIP */
+  .kpi-strip {
+    display:grid; grid-template-columns: repeat(7, 1fr);
+    gap:1px; background:var(--border); border-bottom:1px solid var(--border);
+  }
+  .kpi-card {
+    background:var(--panel); padding:14px 16px;
+    display:flex; flex-direction:column; gap:4px;
+    transition: background .2s;
+  }
+  .kpi-card:hover { background:var(--card); }
+  .kpi-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:500; }
+  .kpi-value { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:var(--text); }
+  .kpi-sub { font-size:10px; color:var(--muted); }
+  .kpi-bar { height:2px; border-radius:1px; margin-top:4px; }
+
+  /* MAIN GRID */
+  .main-grid {
+    display:grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap:1px; background:var(--border);
+    padding:0;
+  }
+  .panel {
+    background:var(--panel); padding:18px 20px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .panel-title {
+    font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:600;
+    color:var(--muted); text-transform:uppercase; letter-spacing:1px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .panel-title span { color:var(--text); }
+  .chart-wrap { position:relative; flex:1; min-height:0; }
+
+  /* BOTTOM GRID */
+  .bottom-grid {
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap:1px; background:var(--border);
+    border-top:1px solid var(--border);
+  }
+
+  /* REGION PILLS */
+  .region-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;
+  }
+  .rp-north { background:rgba(77,142,240,.15); color:#4d8ef0; }
+  .rp-south { background:rgba(0,201,167,.15); color:#00c9a7; }
+  .rp-west  { background:rgba(247,148,29,.15); color:#f7941d; }
+  .rp-east  { background:rgba(232,71,63,.15);  color:#e8473f; }
+
+  /* TABLE */
+  .data-table { width:100%; border-collapse:collapse; font-size:11px; }
+  .data-table th {
+    text-align:left; padding:6px 8px;
+    color:var(--muted); font-weight:500; text-transform:uppercase;
+    font-size:10px; letter-spacing:.4px; border-bottom:1px solid var(--border);
+  }
+  .data-table td { padding:6px 8px; border-bottom:1px solid rgba(48,54,61,.4); }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table tr:hover td { background:rgba(255,255,255,.03); }
+  .mini-bar-wrap { display:flex; align-items:center; gap:6px; }
+  .mini-bar { height:5px; border-radius:3px; }
+
+  /* FUNNEL */
+  .funnel-step {
+    display:flex; align-items:center; gap:10px; margin-bottom:4px;
+  }
+  .funnel-label { font-size:11px; color:var(--muted); width:90px; flex-shrink:0; }
+  .funnel-bar-wrap { flex:1; background:rgba(255,255,255,.05); border-radius:4px; height:20px; overflow:hidden; }
+  .funnel-bar { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:8px; }
+  .funnel-val { font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:600; color:white; }
+  .funnel-pct { font-size:10px; color:var(--muted); margin-left:8px; }
+  .funnel-arrow { text-align:center; color:var(--muted); font-size:10px; margin-bottom:4px; margin-left:90px; }
+
+  /* DSS METER */
+  .dss-meter { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .dss-region { font-size:11px; width:50px; }
+  .dss-track { flex:1; background:rgba(255,255,255,.07); border-radius:4px; height:14px; overflow:hidden; }
+  .dss-fill { height:100%; border-radius:4px; display:flex; align-items:center; justify-content:flex-end; padding-right:6px; }
+  .dss-score { font-size:10px; font-weight:600; color:white; }
+
+  /* SEGMENT BARS */
+  .seg-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .seg-name { font-size:11px; color:var(--muted); width:80px; flex-shrink:0; }
+  .seg-track { flex:1; background:rgba(255,255,255,.05); border-radius:4px; height:16px; overflow:hidden; }
+  .seg-fill { height:100%; border-radius:4px; }
+  .seg-val { font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:600; width:50px; text-align:right; }
+
+  /* INSIGHTS */
+  .insight-card {
+    background:var(--card); border:1px solid var(--border); border-radius:8px;
+    padding:12px 14px; display:flex; gap:10px; align-items:flex-start;
+  }
+  .insight-icon { font-size:18px; flex-shrink:0; }
+  .insight-text { font-size:11px; color:var(--muted); line-height:1.5; }
+  .insight-text strong { color:var(--text); display:block; margin-bottom:2px; font-size:12px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  .span2 { grid-column: span 2; }
+  .span3 { grid-column: span 3; }
+  .span4 { grid-column: span 4; }
+
+  canvas { max-width:100%; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-block">
+    <div class="logo-circle">MS</div>
+    <div class="header-title">
+      <h1>MARUTI SUZUKI — REGIONAL SALES INTELLIGENCE</h1>
+      <p>lata-maruti.com · Business Analytics Dashboard · 144 Records · 12 States · 8 Models</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE DATA</div>
+    <div class="fy-badge">FY 2024–25</div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <div class="filter-label">Filters:</div>
+  <div class="filter-group">
+    <span style="font-size:11px;color:var(--muted)">Region</span>
+    <select id="fRegion" onchange="applyFilters()">
+      <option value="All">All Regions</option>
+      <option value="North">North</option>
+      <option value="South">South</option>
+      <option value="West">West</option>
+      <option value="East">East</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span style="font-size:11px;color:var(--muted)">Quarter</span>
+    <select id="fQuarter" onchange="applyFilters()">
+      <option value="All">All Quarters</option>
+      <option value="Q1">Q1 (Apr–Jun)</option>
+      <option value="Q2">Q2 (Jul–Sep)</option>
+      <option value="Q3">Q3 (Oct–Dec)</option>
+      <option value="Q4">Q4 (Jan–Mar)</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span style="font-size:11px;color:var(--muted)">Model</span>
+    <select id="fModel" onchange="applyFilters()">
+      <option value="All">All Models</option>
+      <option value="Swift">Swift</option>
+      <option value="Baleno">Baleno</option>
+      <option value="Alto K10">Alto K10</option>
+      <option value="Brezza">Brezza</option>
+      <option value="Ertiga">Ertiga</option>
+      <option value="Grand Vitara">Grand Vitara</option>
+      <option value="Dzire">Dzire</option>
+      <option value="Ciaz">Ciaz</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span style="font-size:11px;color:var(--muted)">Segment</span>
+    <select id="fSegment" onchange="applyFilters()">
+      <option value="All">All Segments</option>
+      <option value="Hatchback">Hatchback</option>
+      <option value="SUV">SUV</option>
+      <option value="MPV">MPV</option>
+      <option value="Sedan">Sedan</option>
+    </select>
+  </div>
+  <button class="btn-reset" onclick="resetFilters()">Reset</button>
+</div>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Units Sold</div>
+    <div class="kpi-value" id="kTotalUnits">—</div>
+    <div class="kpi-sub" id="kUnitsAvg">Avg per record</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,var(--accent4),transparent)"></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total Revenue</div>
+    <div class="kpi-value" id="kRevenue">—</div>
+    <div class="kpi-sub">in ₹ Lakhs</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,var(--accent3),transparent)"></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Avg Conversion Rate</div>
+    <div class="kpi-value" id="kConvRate">—</div>
+    <div class="kpi-sub">Enquiry → Sale</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,var(--accent2),transparent)"></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Avg Dealer Satisfaction</div>
+    <div class="kpi-value" id="kDSS">—</div>
+    <div class="kpi-sub">Out of 10.0</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,var(--accent),transparent)"></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total Enquiries</div>
+    <div class="kpi-value" id="kEnquiries">—</div>
+    <div class="kpi-sub">Total lead volume</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,#9b59b6,transparent)"></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Avg Finance Pen.</div>
+    <div class="kpi-value" id="kFinPen">—</div>
+    <div class="kpi-sub">% financed</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,var(--accent2),transparent)"></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Best Region</div>
+    <div class="kpi-value" id="kBestRegion" style="font-size:18px">—</div>
+    <div class="kpi-sub" id="kBestRegionSub">by units</div>
+    <div class="kpi-bar" style="background:linear-gradient(90deg,var(--accent3),transparent)"></div>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+  <!-- ROW 1 -->
+  <!-- Trend Chart - spans 2 cols -->
+  <div class="panel span2" style="min-height:260px">
+    <div class="panel-title">MONTHLY UNITS SOLD TREND <span>by Region</span></div>
+    <div class="chart-wrap" style="height:210px">
+      <canvas id="chartTrend"></canvas>
+    </div>
+  </div>
+
+  <!-- Revenue by Model (Donut) -->
+  <div class="panel" style="min-height:260px">
+    <div class="panel-title">REVENUE SPLIT <span>by Model</span></div>
+    <div class="chart-wrap" style="height:210px">
+      <canvas id="chartDonut"></canvas>
+    </div>
+  </div>
+
+  <!-- ROW 2 -->
+  <!-- Conversion Funnel -->
+  <div class="panel" style="min-height:240px">
+    <div class="panel-title">CONVERSION FUNNEL <span id="funnelLabel">All Regions</span></div>
+    <div id="funnelContainer" style="margin-top:8px;flex:1"></div>
+  </div>
+
+  <!-- DSS by Region -->
+  <div class="panel" style="min-height:240px">
+    <div class="panel-title">DEALER SATISFACTION <span>by Region</span></div>
+    <div id="dssContainer" style="margin-top:8px;flex:1"></div>
+  </div>
+
+  <!-- Digital vs Walkin -->
+  <div class="panel" style="min-height:240px">
+    <div class="panel-title">LEAD SOURCE SPLIT <span>Digital vs Walk-in</span></div>
+    <div class="chart-wrap" style="height:190px">
+      <canvas id="chartLeads"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM GRID -->
+<div class="bottom-grid">
+  <!-- Region Revenue Bar -->
+  <div class="panel" style="min-height:220px">
+    <div class="panel-title">REVENUE <span>by Region</span></div>
+    <div class="chart-wrap" style="height:170px">
+      <canvas id="chartRegionRev"></canvas>
+    </div>
+  </div>
+
+  <!-- Segment Units -->
+  <div class="panel" style="min-height:220px">
+    <div class="panel-title">UNITS SOLD <span>by Segment</span></div>
+    <div id="segContainer" style="margin-top:8px;flex:1"></div>
+  </div>
+
+  <!-- Finance Penetration Trend -->
+  <div class="panel" style="min-height:220px">
+    <div class="panel-title">FINANCE PENETRATION % <span>Monthly Trend</span></div>
+    <div class="chart-wrap" style="height:170px">
+      <canvas id="chartFinPen"></canvas>
+    </div>
+  </div>
+
+  <!-- Top 8 State Table -->
+  <div class="panel" style="min-height:220px">
+    <div class="panel-title">TOP STATES <span>by Revenue (₹L)</span></div>
+    <div id="tableContainer" style="margin-top:6px;overflow-y:auto;max-height:170px"></div>
+  </div>
+</div>
+
+<!-- INSIGHTS SECTION -->
+<div style="background:var(--panel);border-top:1px solid var(--border);padding:16px 24px">
+  <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">
+    📌 KEY BUSINESS INSIGHTS — <span style="color:var(--text)">Act On These</span>
+  </div>
+  <div id="insightsContainer" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
+</div>
+
+<script>
+const RAW = [{"month":"Apr","quarter":"Q1","region":"North","state":"Delhi","model":"Baleno","segment":"Hatchback","units":1726,"price":7.6,"revenue":13117.6,"enquiries":5128,"testDrives":2020,"convRate":33.7,"dss":6.8,"digitalLeads":2810,"walkinLeads":2318,"exchange":400,"finPen":62.7,"accRev":14.4},{"month":"Apr","quarter":"Q1","region":"North","state":"Haryana","model":"Baleno","segment":"Hatchback","units":2669,"price":7.8,"revenue":20818.2,"enquiries":8597,"testDrives":3749,"convRate":31.0,"dss":8.6,"digitalLeads":4644,"walkinLeads":3953,"exchange":568,"finPen":58.5,"accRev":28.8},{"month":"Apr","quarter":"Q1","region":"North","state":"Punjab","model":"Swift","segment":"Hatchback","units":1253,"price":6.5,"revenue":8144.5,"enquiries":4120,"testDrives":1705,"convRate":30.4,"dss":7.0,"digitalLeads":2436,"walkinLeads":1684,"exchange":251,"finPen":47.8,"accRev":11.2},{"month":"Apr","quarter":"Q1","region":"South","state":"Tamil Nadu","model":"Grand Vitara","segment":"SUV","units":777,"price":15.7,"revenue":12198.9,"enquiries":2572,"testDrives":1115,"convRate":30.2,"dss":9.4,"digitalLeads":1223,"walkinLeads":1349,"exchange":180,"finPen":69.9,"accRev":11.0},{"month":"Apr","quarter":"Q1","region":"South","state":"Karnataka","model":"Grand Vitara","segment":"SUV","units":884,"price":15.7,"revenue":13878.8,"enquiries":2503,"testDrives":1008,"convRate":35.3,"dss":7.4,"digitalLeads":1041,"walkinLeads":1462,"exchange":163,"finPen":48.0,"accRev":9.5},{"month":"Apr","quarter":"Q1","region":"South","state":"Telangana","model":"Grand Vitara","segment":"SUV","units":2055,"price":15.3,"revenue":31441.5,"enquiries":6055,"testDrives":2462,"convRate":33.9,"dss":9.3,"digitalLeads":3206,"walkinLeads":2849,"exchange":496,"finPen":50.1,"accRev":31.4},{"month":"Apr","quarter":"Q1","region":"West","state":"Maharashtra","model":"Alto K10","segment":"Hatchback","units":1705,"price":4.6,"revenue":7843.0,"enquiries":5954,"testDrives":2643,"convRate":28.6,"dss":8.2,"digitalLeads":3196,"walkinLeads":2758,"exchange":471,"finPen":68.3,"accRev":17.5},{"month":"Apr","quarter":"Q1","region":"West","state":"Gujarat","model":"Swift","segment":"Hatchback","units":2243,"price":6.5,"revenue":14579.5,"enquiries":6700,"testDrives":2687,"convRate":33.5,"dss":9.3,"digitalLeads":3854,"walkinLeads":2846,"exchange":442,"finPen":64.7,"accRev":26.8},{"month":"Apr","quarter":"Q1","region":"West","state":"Rajasthan","model":"Ciaz","segment":"Sedan","units":1171,"price":10.6,"revenue":12412.6,"enquiries":3480,"testDrives":1517,"convRate":33.6,"dss":7.3,"digitalLeads":1798,"walkinLeads":1682,"exchange":333,"finPen":57.0,"accRev":11.9},{"month":"Apr","quarter":"Q1","region":"East","state":"West Bengal","model":"Alto K10","segment":"Hatchback","units":972,"price":4.6,"revenue":4471.2,"enquiries":3235,"testDrives":1507,"convRate":30.0,"dss":7.0,"digitalLeads":1397,"walkinLeads":1838,"exchange":245,"finPen":62.9,"accRev":11.5},{"month":"Apr","quarter":"Q1","region":"East","state":"Odisha","model":"Ciaz","segment":"Sedan","units":647,"price":10.9,"revenue":7052.3,"enquiries":2119,"testDrives":829,"convRate":30.5,"dss":9.2,"digitalLeads":1165,"walkinLeads":954,"exchange":171,"finPen":55.2,"accRev":7.1},{"month":"Apr","quarter":"Q1","region":"East","state":"Bihar","model":"Alto K10","segment":"Hatchback","units":1678,"price":4.6,"revenue":7718.8,"enquiries":5839,"testDrives":2663,"convRate":28.7,"dss":8.0,"digitalLeads":2459,"walkinLeads":3380,"exchange":409,"finPen":70.3,"accRev":21.9},{"month":"May","quarter":"Q1","region":"North","state":"Delhi","model":"Brezza","segment":"SUV","units":1261,"price":11.3,"revenue":14249.3,"enquiries":4006,"testDrives":1834,"convRate":31.5,"dss":8.1,"digitalLeads":1602,"walkinLeads":2404,"exchange":250,"finPen":45.6,"accRev":21.8},{"month":"May","quarter":"Q1","region":"North","state":"Haryana","model":"Ertiga","segment":"MPV","units":1586,"price":9.7,"revenue":15384.2,"enquiries":5415,"testDrives":2570,"convRate":29.3,"dss":6.8,"digitalLeads":2692,"walkinLeads":2723,"exchange":254,"finPen":67.8,"accRev":24.8},{"month":"May","quarter":"Q1","region":"North","state":"Punjab","model":"Alto K10","segment":"Hatchback","units":1276,"price":4.7,"revenue":5997.2,"enquiries":3809,"testDrives":1779,"convRate":33.5,"dss":7.8,"digitalLeads":1684,"walkinLeads":2125,"exchange":294,"finPen":66.9,"accRev":12.8},{"month":"May","quarter":"Q1","region":"South","state":"Tamil Nadu","model":"Ertiga","segment":"MPV","units":2129,"price":9.8,"revenue":20864.2,"enquiries":6614,"testDrives":2855,"convRate":32.2,"dss":6.9,"digitalLeads":2942,"walkinLeads":3672,"exchange":427,"finPen":62.6,"accRev":21.9},{"month":"May","quarter":"Q1","region":"South","state":"Karnataka","model":"Brezza","segment":"SUV","units":841,"price":11.2,"revenue":9419.2,"enquiries":2489,"testDrives":1171,"convRate":33.8,"dss":9.1,"digitalLeads":1030,"walkinLeads":1459,"exchange":156,"finPen":65.1,"accRev":8.5},{"month":"May","quarter":"Q1","region":"South","state":"Telangana","model":"Alto K10","segment":"Hatchback","units":2536,"price":4.8,"revenue":12172.8,"enquiries":7532,"testDrives":3218,"convRate":33.7,"dss":7.7,"digitalLeads":3154,"walkinLeads":4378,"exchange":631,"finPen":55.6,"accRev":30.7},{"month":"May","quarter":"Q1","region":"West","state":"Maharashtra","model":"Swift","segment":"Hatchback","units":1003,"price":6.4,"revenue":6419.2,"enquiries":2850,"testDrives":1290,"convRate":35.2,"dss":8.9,"digitalLeads":1202,"walkinLeads":1648,"exchange":179,"finPen":61.1,"accRev":9.4},{"month":"May","quarter":"Q1","region":"West","state":"Gujarat","model":"Alto K10","segment":"Hatchback","units":1623,"price":4.4,"revenue":7141.2,"enquiries":5537,"testDrives":2145,"convRate":29.3,"dss":8.9,"digitalLeads":3162,"walkinLeads":2375,"exchange":267,"finPen":64.6,"accRev":21.8},{"month":"May","quarter":"Q1","region":"West","state":"Rajasthan","model":"Swift","segment":"Hatchback","units":1568,"price":6.7,"revenue":10505.6,"enquiries":4572,"testDrives":1959,"convRate":34.3,"dss":7.1,"digitalLeads":2195,"walkinLeads":2377,"exchange":248,"finPen":56.4,"accRev":28.0},{"month":"May","quarter":"Q1","region":"East","state":"West Bengal","model":"Ertiga","segment":"MPV","units":2463,"price":10.2,"revenue":25122.6,"enquiries":7388,"testDrives":3322,"convRate":33.3,"dss":8.7,"digitalLeads":4112,"walkinLeads":3276,"exchange":613,"finPen":59.6,"accRev":24.4},{"month":"May","quarter":"Q1","region":"East","state":"Odisha","model":"Brezza","segment":"SUV","units":849,"price":12.0,"revenue":10188.0,"enquiries":2821,"testDrives":1088,"convRate":30.1,"dss":8.3,"digitalLeads":1412,"walkinLeads":1409,"exchange":235,"finPen":49.7,"accRev":14.9},{"month":"May","quarter":"Q1","region":"East","state":"Bihar","model":"Baleno","segment":"Hatchback","units":880,"price":8.3,"revenue":7304.0,"enquiries":2830,"testDrives":1266,"convRate":31.1,"dss":7.2,"digitalLeads":1199,"walkinLeads":1631,"exchange":249,"finPen":52.4,"accRev":12.3},{"month":"Jun","quarter":"Q1","region":"North","state":"Delhi","model":"Baleno","segment":"Hatchback","units":2741,"price":7.9,"revenue":21653.9,"enquiries":8281,"testDrives":3362,"convRate":33.1,"dss":8.5,"digitalLeads":3832,"walkinLeads":4449,"exchange":520,"finPen":48.9,"accRev":39.6},{"month":"Jun","quarter":"Q1","region":"North","state":"Haryana","model":"Ciaz","segment":"Sedan","units":897,"price":10.8,"revenue":9687.6,"enquiries":2517,"testDrives":1112,"convRate":35.6,"dss":8.2,"digitalLeads":1057,"walkinLeads":1460,"exchange":206,"finPen":60.2,"accRev":8.4},{"month":"Jun","quarter":"Q1","region":"North","state":"Punjab","model":"Grand Vitara","segment":"SUV","units":1600,"price":15.9,"revenue":25440.0,"enquiries":4893,"testDrives":1936,"convRate":32.7,"dss":9.0,"digitalLeads":2645,"walkinLeads":2248,"exchange":386,"finPen":74.6,"accRev":23.3},{"month":"Jun","quarter":"Q1","region":"South","state":"Tamil Nadu","model":"Swift","segment":"Hatchback","units":1826,"price":6.4,"revenue":11686.4,"enquiries":6303,"testDrives":2460,"convRate":29.0,"dss":9.1,"digitalLeads":2854,"walkinLeads":3449,"exchange":517,"finPen":67.3,"accRev":17.4},{"month":"Jun","quarter":"Q1","region":"South","state":"Karnataka","model":"Ertiga","segment":"MPV","units":2004,"price":10.0,"revenue":20040.0,"enquiries":5896,"testDrives":2614,"convRate":34.0,"dss":7.3,"digitalLeads":2934,"walkinLeads":2962,"exchange":572,"finPen":70.4,"accRev":17.9},{"month":"Jun","quarter":"Q1","region":"South","state":"Telangana","model":"Dzire","segment":"Sedan","units":780,"price":7.6,"revenue":5928.0,"enquiries":2185,"testDrives":998,"convRate":35.7,"dss":8.4,"digitalLeads":988,"walkinLeads":1197,"exchange":203,"finPen":61.6,"accRev":9.6},{"month":"Jun","quarter":"Q1","region":"West","state":"Maharashtra","model":"Swift","segment":"Hatchback","units":1210,"price":6.0,"revenue":7260.0,"enquiries":3850,"testDrives":1784,"convRate":31.4,"dss":8.2,"digitalLeads":1654,"walkinLeads":2196,"exchange":204,"finPen":54.2,"accRev":20.6},{"month":"Jun","quarter":"Q1","region":"West","state":"Gujarat","model":"Swift","segment":"Hatchback","units":1460,"price":6.6,"revenue":9636.0,"enquiries":4785,"testDrives":2137,"convRate":30.5,"dss":7.6,"digitalLeads":2449,"walkinLeads":2336,"exchange":410,"finPen":74.2,"accRev":22.6},{"month":"Jun","quarter":"Q1","region":"West","state":"Rajasthan","model":"Brezza","segment":"SUV","units":1325,"price":11.9,"revenue":15767.5,"enquiries":4527,"testDrives":1731,"convRate":29.3,"dss":8.7,"digitalLeads":2111,"walkinLeads":2416,"exchange":383,"finPen":69.1,"accRev":22.0},{"month":"Jun","quarter":"Q1","region":"East","state":"West Bengal","model":"Brezza","segment":"SUV","units":1042,"price":11.4,"revenue":11878.8,"enquiries":3196,"testDrives":1226,"convRate":32.6,"dss":7.9,"digitalLeads":1405,"walkinLeads":1791,"exchange":299,"finPen":55.5,"accRev":16.9},{"month":"Jun","quarter":"Q1","region":"East","state":"Odisha","model":"Brezza","segment":"SUV","units":1391,"price":11.4,"revenue":15857.4,"enquiries":4282,"testDrives":1746,"convRate":32.5,"dss":6.7,"digitalLeads":2375,"walkinLeads":1907,"exchange":281,"finPen":60.3,"accRev":20.6},{"month":"Jun","quarter":"Q1","region":"East","state":"Bihar","model":"Grand Vitara","segment":"SUV","units":1072,"price":16.0,"revenue":17152.0,"enquiries":3659,"testDrives":1485,"convRate":29.3,"dss":8.2,"digitalLeads":2183,"walkinLeads":1476,"exchange":166,"finPen":62.9,"accRev":12.3},{"month":"Jul","quarter":"Q2","region":"North","state":"Delhi","model":"Grand Vitara","segment":"SUV","units":2694,"price":15.5,"revenue":41757.0,"enquiries":7761,"testDrives":3647,"convRate":34.7,"dss":7.1,"digitalLeads":3173,"walkinLeads":4588,"exchange":580,"finPen":60.6,"accRev":43.3},{"month":"Jul","quarter":"Q2","region":"North","state":"Haryana","model":"Brezza","segment":"SUV","units":886,"price":11.5,"revenue":10189.0,"enquiries":3069,"testDrives":1448,"convRate":28.9,"dss":8.4,"digitalLeads":1634,"walkinLeads":1435,"exchange":149,"finPen":72.0,"accRev":11.6},{"month":"Jul","quarter":"Q2","region":"North","state":"Punjab","model":"Dzire","segment":"Sedan","units":1811,"price":7.2,"revenue":13039.2,"enquiries":5773,"testDrives":2304,"convRate":31.4,"dss":8.5,"digitalLeads":2746,"walkinLeads":3027,"exchange":474,"finPen":50.2,"accRev":24.8},{"month":"Jul","quarter":"Q2","region":"South","state":"Tamil Nadu","model":"Dzire","segment":"Sedan","units":601,"price":7.3,"revenue":4387.3,"enquiries":1810,"testDrives":725,"convRate":33.2,"dss":8.9,"digitalLeads":943,"walkinLeads":867,"exchange":119,"finPen":58.3,"accRev":8.9},{"month":"Jul","quarter":"Q2","region":"South","state":"Karnataka","model":"Ciaz","segment":"Sedan","units":1295,"price":11.1,"revenue":14374.5,"enquiries":4223,"testDrives":1724,"convRate":30.7,"dss":8.5,"digitalLeads":2212,"walkinLeads":2011,"exchange":212,"finPen":73.6,"accRev":13.4},{"month":"Jul","quarter":"Q2","region":"South","state":"Telangana","model":"Ertiga","segment":"MPV","units":1415,"price":9.7,"revenue":13725.5,"enquiries":4107,"testDrives":1579,"convRate":34.5,"dss":9.5,"digitalLeads":2144,"walkinLeads":1963,"exchange":375,"finPen":58.7,"accRev":23.9},{"month":"Jul","quarter":"Q2","region":"West","state":"Maharashtra","model":"Brezza","segment":"SUV","units":2172,"price":11.8,"revenue":25629.6,"enquiries":6833,"testDrives":2763,"convRate":31.8,"dss":8.5,"digitalLeads":2740,"walkinLeads":4093,"exchange":570,"finPen":68.1,"accRev":19.7},{"month":"Jul","quarter":"Q2","region":"West","state":"Gujarat","model":"Dzire","segment":"Sedan","units":2721,"price":7.1,"revenue":19319.1,"enquiries":8503,"testDrives":3705,"convRate":32.0,"dss":9.3,"digitalLeads":3607,"walkinLeads":4896,"exchange":462,"finPen":58.9,"accRev":36.2},{"month":"Jul","quarter":"Q2","region":"West","state":"Rajasthan","model":"Grand Vitara","segment":"SUV","units":2412,"price":16.0,"revenue":38592.0,"enquiries":7788,"testDrives":3519,"convRate":31.0,"dss":8.0,"digitalLeads":4408,"walkinLeads":3380,"exchange":560,"finPen":71.9,"accRev":37.2},{"month":"Jul","quarter":"Q2","region":"East","state":"West Bengal","model":"Ciaz","segment":"Sedan","units":1612,"price":10.9,"revenue":17570.8,"enquiries":5461,"testDrives":2226,"convRate":29.5,"dss":8.8,"digitalLeads":2713,"walkinLeads":2748,"exchange":299,"finPen":58.2,"accRev":24.4},{"month":"Jul","quarter":"Q2","region":"East","state":"Odisha","model":"Brezza","segment":"SUV","units":1909,"price":11.4,"revenue":21762.6,"enquiries":6538,"testDrives":2537,"convRate":29.2,"dss":7.0,"digitalLeads":3116,"walkinLeads":3422,"exchange":330,"finPen":51.4,"accRev":23.2},{"month":"Jul","quarter":"Q2","region":"East","state":"Bihar","model":"Grand Vitara","segment":"SUV","units":2303,"price":15.6,"revenue":35926.8,"enquiries":6548,"testDrives":3033,"convRate":35.2,"dss":7.7,"digitalLeads":3627,"walkinLeads":2921,"exchange":672,"finPen":45.6,"accRev":38.7},{"month":"Aug","quarter":"Q2","region":"North","state":"Delhi","model":"Dzire","segment":"Sedan","units":2040,"price":7.3,"revenue":14892.0,"enquiries":6138,"testDrives":2571,"convRate":33.2,"dss":9.2,"digitalLeads":3481,"walkinLeads":2657,"exchange":470,"finPen":67.0,"accRev":32.6},{"month":"Aug","quarter":"Q2","region":"North","state":"Haryana","model":"Brezza","segment":"SUV","units":1717,"price":11.6,"revenue":19917.2,"enquiries":5331,"testDrives":2041,"convRate":32.2,"dss":7.5,"digitalLeads":2856,"walkinLeads":2475,"exchange":361,"finPen":50.0,"accRev":21.8},{"month":"Aug","quarter":"Q2","region":"North","state":"Punjab","model":"Alto K10","segment":"Hatchback","units":2787,"price":5.0,"revenue":13935.0,"enquiries":7856,"testDrives":3294,"convRate":35.5,"dss":8.2,"digitalLeads":3184,"walkinLeads":4672,"exchange":686,"finPen":49.1,"accRev":35.2},{"month":"Aug","quarter":"Q2","region":"South","state":"Tamil Nadu","model":"Swift","segment":"Hatchback","units":1940,"price":6.1,"revenue":11834.0,"enquiries":5719,"testDrives":2360,"convRate":33.9,"dss":8.8,"digitalLeads":2721,"walkinLeads":2998,"exchange":509,"finPen":70.0,"accRev":20.4},{"month":"Aug","quarter":"Q2","region":"South","state":"Karnataka","model":"Baleno","segment":"Hatchback","units":813,"price":8.0,"revenue":6504.0,"enquiries":2845,"testDrives":1180,"convRate":28.6,"dss":8.5,"digitalLeads":1582,"walkinLeads":1263,"exchange":201,"finPen":67.6,"accRev":14.2},{"month":"Aug","quarter":"Q2","region":"South","state":"Telangana","model":"Brezza","segment":"SUV","units":1224,"price":11.9,"revenue":14565.6,"enquiries":3631,"testDrives":1551,"convRate":33.7,"dss":6.8,"digitalLeads":2140,"walkinLeads":1491,"exchange":268,"finPen":52.7,"accRev":14.3},{"month":"Aug","quarter":"Q2","region":"West","state":"Maharashtra","model":"Baleno","segment":"Hatchback","units":1270,"price":8.2,"revenue":10414.0,"enquiries":4413,"testDrives":1724,"convRate":28.8,"dss":6.6,"digitalLeads":2040,"walkinLeads":2373,"exchange":319,"finPen":73.7,"accRev":15.2},{"month":"Aug","quarter":"Q2","region":"West","state":"Gujarat","model":"Brezza","segment":"SUV","units":1594,"price":11.3,"revenue":18012.2,"enquiries":4576,"testDrives":2092,"convRate":34.8,"dss":9.1,"digitalLeads":2379,"walkinLeads":2197,"exchange":268,"finPen":74.5,"accRev":25.2},{"month":"Aug","quarter":"Q2","region":"West","state":"Rajasthan","model":"Grand Vitara","segment":"SUV","units":2117,"price":15.6,"revenue":33025.2,"enquiries":6029,"testDrives":2681,"convRate":35.1,"dss":6.5,"digitalLeads":2918,"walkinLeads":3111,"exchange":473,"finPen":58.0,"accRev":24.6},{"month":"Aug","quarter":"Q2","region":"East","state":"West Bengal","model":"Ciaz","segment":"Sedan","units":2383,"price":11.1,"revenue":26451.3,"enquiries":6966,"testDrives":3010,"convRate":34.2,"dss":8.5,"digitalLeads":3644,"walkinLeads":3322,"exchange":686,"finPen":68.2,"accRev":30.1},{"month":"Aug","quarter":"Q2","region":"East","state":"Odisha","model":"Ertiga","segment":"MPV","units":1605,"price":9.8,"revenue":15729.0,"enquiries":5427,"testDrives":2109,"convRate":29.6,"dss":9.1,"digitalLeads":2435,"walkinLeads":2992,"exchange":352,"finPen":63.3,"accRev":18.9},{"month":"Aug","quarter":"Q2","region":"East","state":"Bihar","model":"Swift","segment":"Hatchback","units":1931,"price":6.3,"revenue":12165.3,"enquiries":5652,"testDrives":2267,"convRate":34.2,"dss":8.9,"digitalLeads":2645,"walkinLeads":3007,"exchange":544,"finPen":66.0,"accRev":20.8},{"month":"Sep","quarter":"Q2","region":"North","state":"Delhi","model":"Swift","segment":"Hatchback","units":1382,"price":6.3,"revenue":8706.6,"enquiries":3952,"testDrives":1786,"convRate":35.0,"dss":8.0,"digitalLeads":2180,"walkinLeads":1772,"exchange":350,"finPen":64.4,"accRev":17.8},{"month":"Sep","quarter":"Q2","region":"North","state":"Haryana","model":"Swift","segment":"Hatchback","units":1507,"price":6.0,"revenue":9042.0,"enquiries":4646,"testDrives":1878,"convRate":32.4,"dss":8.5,"digitalLeads":2201,"walkinLeads":2445,"exchange":351,"finPen":55.3,"accRev":27.1},{"month":"Sep","quarter":"Q2","region":"North","state":"Punjab","model":"Grand Vitara","segment":"SUV","units":2458,"price":15.5,"revenue":38099.0,"enquiries":7348,"testDrives":2976,"convRate":33.5,"dss":6.9,"digitalLeads":3222,"walkinLeads":4126,"exchange":412,"finPen":61.1,"accRev":38.4},{"month":"Sep","quarter":"Q2","region":"South","state":"Tamil Nadu","model":"Alto K10","segment":"Hatchback","units":2583,"price":4.4,"revenue":11365.2,"enquiries":7732,"testDrives":3394,"convRate":33.4,"dss":8.8,"digitalLeads":4015,"walkinLeads":3717,"exchange":767,"finPen":70.0,"accRev":28.3},{"month":"Sep","quarter":"Q2","region":"South","state":"Karnataka","model":"Grand Vitara","segment":"SUV","units":657,"price":15.3,"revenue":10052.1,"enquiries":2165,"testDrives":850,"convRate":30.3,"dss":6.6,"digitalLeads":889,"walkinLeads":1276,"exchange":127,"finPen":73.3,"accRev":9.4},{"month":"Sep","quarter":"Q2","region":"South","state":"Telangana","model":"Ciaz","segment":"Sedan","units":650,"price":10.6,"revenue":6890.0,"enquiries":2081,"testDrives":888,"convRate":31.2,"dss":7.8,"digitalLeads":909,"walkinLeads":1172,"exchange":102,"finPen":73.2,"accRev":8.3},{"month":"Sep","quarter":"Q2","region":"West","state":"Maharashtra","model":"Baleno","segment":"Hatchback","units":903,"price":7.9,"revenue":7133.7,"enquiries":2893,"testDrives":1297,"convRate":31.2,"dss":7.0,"digitalLeads":1626,"walkinLeads":1267,"exchange":264,"finPen":47.6,"accRev":9.5},{"month":"Sep","quarter":"Q2","region":"West","state":"Gujarat","model":"Dzire","segment":"Sedan","units":1524,"price":7.4,"revenue":11277.6,"enquiries":5094,"testDrives":2129,"convRate":29.9,"dss":9.2,"digitalLeads":2340,"walkinLeads":2754,"exchange":363,"finPen":57.9,"accRev":20.9},{"month":"Sep","quarter":"Q2","region":"West","state":"Rajasthan","model":"Swift","segment":"Hatchback","units":1006,"price":6.4,"revenue":6438.4,"enquiries":3484,"testDrives":1396,"convRate":28.9,"dss":7.1,"digitalLeads":1853,"walkinLeads":1631,"exchange":174,"finPen":50.2,"accRev":8.8},{"month":"Sep","quarter":"Q2","region":"East","state":"West Bengal","model":"Swift","segment":"Hatchback","units":2524,"price":6.2,"revenue":15648.8,"enquiries":7581,"testDrives":3056,"convRate":33.3,"dss":8.6,"digitalLeads":4098,"walkinLeads":3483,"exchange":550,"finPen":65.6,"accRev":43.5},{"month":"Sep","quarter":"Q2","region":"East","state":"Odisha","model":"Brezza","segment":"SUV","units":1520,"price":11.5,"revenue":17480.0,"enquiries":4945,"testDrives":2328,"convRate":30.7,"dss":9.0,"digitalLeads":2048,"walkinLeads":2897,"exchange":265,"finPen":54.2,"accRev":23.5},{"month":"Sep","quarter":"Q2","region":"East","state":"Bihar","model":"Ertiga","segment":"MPV","units":2519,"price":9.9,"revenue":24938.1,"enquiries":8267,"testDrives":3719,"convRate":30.5,"dss":9.3,"digitalLeads":4134,"walkinLeads":4133,"exchange":564,"finPen":47.4,"accRev":21.2},{"month":"Oct","quarter":"Q3","region":"North","state":"Delhi","model":"Dzire","segment":"Sedan","units":1625,"price":7.5,"revenue":12187.5,"enquiries":4579,"testDrives":1844,"convRate":35.5,"dss":8.5,"digitalLeads":2619,"walkinLeads":1960,"exchange":386,"finPen":45.6,"accRev":25.4},{"month":"Oct","quarter":"Q3","region":"North","state":"Haryana","model":"Ertiga","segment":"MPV","units":1317,"price":10.0,"revenue":13170.0,"enquiries":4121,"testDrives":1834,"convRate":32.0,"dss":9.2,"digitalLeads":1797,"walkinLeads":2324,"exchange":313,"finPen":64.0,"accRev":17.0},{"month":"Oct","quarter":"Q3","region":"North","state":"Punjab","model":"Baleno","segment":"Hatchback","units":2272,"price":8.0,"revenue":18176.0,"enquiries":6891,"testDrives":3080,"convRate":33.0,"dss":9.1,"digitalLeads":3210,"walkinLeads":3681,"exchange":577,"finPen":53.6,"accRev":39.7},{"month":"Oct","quarter":"Q3","region":"South","state":"Tamil Nadu","model":"Swift","segment":"Hatchback","units":1888,"price":6.3,"revenue":11894.4,"enquiries":5619,"testDrives":2200,"convRate":33.6,"dss":8.8,"digitalLeads":3219,"walkinLeads":2400,"exchange":516,"finPen":45.0,"accRev":31.5},{"month":"Oct","quarter":"Q3","region":"South","state":"Karnataka","model":"Ciaz","segment":"Sedan","units":1368,"price":10.8,"revenue":14774.4,"enquiries":4326,"testDrives":1913,"convRate":31.6,"dss":8.0,"digitalLeads":2112,"walkinLeads":2214,"exchange":215,"finPen":53.0,"accRev":12.7},{"month":"Oct","quarter":"Q3","region":"South","state":"Telangana","model":"Ertiga","segment":"MPV","units":2585,"price":9.9,"revenue":25591.5,"enquiries":7457,"testDrives":3559,"convRate":34.7,"dss":8.3,"digitalLeads":3339,"walkinLeads":4118,"exchange":449,"finPen":61.5,"accRev":35.0},{"month":"Oct","quarter":"Q3","region":"West","state":"Maharashtra","model":"Baleno","segment":"Hatchback","units":1064,"price":7.8,"revenue":8299.2,"enquiries":3322,"testDrives":1301,"convRate":32.0,"dss":9.0,"digitalLeads":1659,"walkinLeads":1663,"exchange":273,"finPen":60.3,"accRev":11.4},{"month":"Oct","quarter":"Q3","region":"West","state":"Gujarat","model":"Ciaz","segment":"Sedan","units":1598,"price":11.3,"revenue":18057.4,"enquiries":4985,"testDrives":1966,"convRate":32.1,"dss":7.1,"digitalLeads":2591,"walkinLeads":2394,"exchange":418,"finPen":49.1,"accRev":13.9},{"month":"Oct","quarter":"Q3","region":"West","state":"Rajasthan","model":"Dzire","segment":"Sedan","units":2679,"price":7.2,"revenue":19288.8,"enquiries":8002,"testDrives":3042,"convRate":33.5,"dss":8.7,"digitalLeads":4541,"walkinLeads":3461,"exchange":634,"finPen":64.8,"accRev":44.6},{"month":"Oct","quarter":"Q3","region":"East","state":"West Bengal","model":"Ciaz","segment":"Sedan","units":2013,"price":10.9,"revenue":21941.7,"enquiries":6104,"testDrives":2785,"convRate":33.0,"dss":7.6,"digitalLeads":3580,"walkinLeads":2524,"exchange":564,"finPen":74.4,"accRev":20.9},{"month":"Oct","quarter":"Q3","region":"East","state":"Odisha","model":"Dzire","segment":"Sedan","units":2282,"price":7.1,"revenue":16202.2,"enquiries":6459,"testDrives":2935,"convRate":35.3,"dss":8.6,"digitalLeads":3631,"walkinLeads":2828,"exchange":474,"finPen":64.9,"accRev":37.0},{"month":"Oct","quarter":"Q3","region":"East","state":"Bihar","model":"Alto K10","segment":"Hatchback","units":751,"price":4.6,"revenue":3454.6,"enquiries":2169,"testDrives":1033,"convRate":34.6,"dss":7.5,"digitalLeads":911,"walkinLeads":1258,"exchange":207,"finPen":48.0,"accRev":12.8},{"month":"Nov","quarter":"Q3","region":"North","state":"Delhi","model":"Swift","segment":"Hatchback","units":2279,"price":6.5,"revenue":14813.5,"enquiries":7770,"testDrives":3706,"convRate":29.3,"dss":6.7,"digitalLeads":4322,"walkinLeads":3448,"exchange":432,"finPen":63.7,"accRev":27.3},{"month":"Nov","quarter":"Q3","region":"North","state":"Haryana","model":"Baleno","segment":"Hatchback","units":2785,"price":8.3,"revenue":23115.5,"enquiries":8538,"testDrives":3514,"convRate":32.6,"dss":8.7,"digitalLeads":4711,"walkinLeads":3827,"exchange":782,"finPen":46.1,"accRev":24.2},{"month":"Nov","quarter":"Q3","region":"North","state":"Punjab","model":"Ertiga","segment":"MPV","units":970,"price":10.3,"revenue":9991.0,"enquiries":3010,"testDrives":1173,"convRate":32.2,"dss":8.4,"digitalLeads":1729,"walkinLeads":1281,"exchange":210,"finPen":65.8,"accRev":16.5},{"month":"Nov","quarter":"Q3","region":"South","state":"Tamil Nadu","model":"Swift","segment":"Hatchback","units":829,"price":6.2,"revenue":5139.8,"enquiries":2491,"testDrives":1039,"convRate":33.3,"dss":6.9,"digitalLeads":1261,"walkinLeads":1230,"exchange":194,"finPen":68.8,"accRev":8.0},{"month":"Nov","quarter":"Q3","region":"South","state":"Karnataka","model":"Baleno","segment":"Hatchback","units":2166,"price":8.1,"revenue":17544.6,"enquiries":7004,"testDrives":2830,"convRate":30.9,"dss":9.2,"digitalLeads":3002,"walkinLeads":4002,"exchange":474,"finPen":52.6,"accRev":22.9},{"month":"Nov","quarter":"Q3","region":"South","state":"Telangana","model":"Swift","segment":"Hatchback","units":2505,"price":6.6,"revenue":16533.0,"enquiries":8594,"testDrives":3848,"convRate":29.1,"dss":7.0,"digitalLeads":4196,"walkinLeads":4398,"exchange":505,"finPen":62.6,"accRev":36.0},{"month":"Nov","quarter":"Q3","region":"West","state":"Maharashtra","model":"Dzire","segment":"Sedan","units":2471,"price":7.5,"revenue":18532.5,"enquiries":8380,"testDrives":3351,"convRate":29.5,"dss":7.7,"digitalLeads":4161,"walkinLeads":4219,"exchange":458,"finPen":62.2,"accRev":34.0},{"month":"Nov","quarter":"Q3","region":"West","state":"Gujarat","model":"Ertiga","segment":"MPV","units":2221,"price":9.5,"revenue":21099.5,"enquiries":6645,"testDrives":2901,"convRate":33.4,"dss":8.6,"digitalLeads":3647,"walkinLeads":2998,"exchange":349,"finPen":63.2,"accRev":28.8},{"month":"Nov","quarter":"Q3","region":"West","state":"Rajasthan","model":"Ertiga","segment":"MPV","units":1542,"price":10.1,"revenue":15574.2,"enquiries":4972,"testDrives":2064,"convRate":31.0,"dss":8.4,"digitalLeads":2606,"walkinLeads":2366,"exchange":388,"finPen":66.6,"accRev":22.5},{"month":"Nov","quarter":"Q3","region":"East","state":"West Bengal","model":"Alto K10","segment":"Hatchback","units":761,"price":4.7,"revenue":3576.7,"enquiries":2295,"testDrives":973,"convRate":33.2,"dss":8.2,"digitalLeads":1254,"walkinLeads":1041,"exchange":124,"finPen":53.9,"accRev":11.8},{"month":"Nov","quarter":"Q3","region":"East","state":"Odisha","model":"Alto K10","segment":"Hatchback","units":2098,"price":4.4,"revenue":9231.2,"enquiries":6654,"testDrives":3136,"convRate":31.5,"dss":9.0,"digitalLeads":3003,"walkinLeads":3651,"exchange":574,"finPen":59.5,"accRev":33.7},{"month":"Nov","quarter":"Q3","region":"East","state":"Bihar","model":"Grand Vitara","segment":"SUV","units":2518,"price":15.8,"revenue":39784.4,"enquiries":8747,"testDrives":3446,"convRate":28.8,"dss":9.4,"digitalLeads":5003,"walkinLeads":3744,"exchange":651,"finPen":74.4,"accRev":44.5},{"month":"Dec","quarter":"Q3","region":"North","state":"Delhi","model":"Grand Vitara","segment":"SUV","units":2216,"price":15.3,"revenue":33904.8,"enquiries":6226,"testDrives":2699,"convRate":35.6,"dss":7.9,"digitalLeads":3328,"walkinLeads":2898,"exchange":555,"finPen":62.5,"accRev":36.0},{"month":"Dec","quarter":"Q3","region":"North","state":"Haryana","model":"Grand Vitara","segment":"SUV","units":1557,"price":15.3,"revenue":23822.1,"enquiries":4873,"testDrives":2153,"convRate":32.0,"dss":9.3,"digitalLeads":2268,"walkinLeads":2605,"exchange":376,"finPen":64.4,"accRev":22.3},{"month":"Dec","quarter":"Q3","region":"North","state":"Punjab","model":"Ciaz","segment":"Sedan","units":1837,"price":11.2,"revenue":20574.4,"enquiries":5978,"testDrives":2341,"convRate":30.7,"dss":6.6,"digitalLeads":2435,"walkinLeads":3543,"exchange":549,"finPen":48.5,"accRev":19.0},{"month":"Dec","quarter":"Q3","region":"South","state":"Tamil Nadu","model":"Alto K10","segment":"Hatchback","units":2119,"price":4.5,"revenue":9535.5,"enquiries":6927,"testDrives":3147,"convRate":30.6,"dss":9.3,"digitalLeads":3351,"walkinLeads":3576,"exchange":553,"finPen":49.6,"accRev":25.7},{"month":"Dec","quarter":"Q3","region":"South","state":"Karnataka","model":"Baleno","segment":"Hatchback","units":2271,"price":8.3,"revenue":18849.3,"enquiries":7851,"testDrives":3203,"convRate":28.9,"dss":8.6,"digitalLeads":3481,"walkinLeads":4370,"exchange":492,"finPen":52.1,"accRev":26.4},{"month":"Dec","quarter":"Q3","region":"South","state":"Telangana","model":"Grand Vitara","segment":"SUV","units":2069,"price":15.6,"revenue":32276.4,"enquiries":5880,"testDrives":2396,"convRate":35.2,"dss":9.4,"digitalLeads":3468,"walkinLeads":2412,"exchange":566,"finPen":47.8,"accRev":20.9},{"month":"Dec","quarter":"Q3","region":"West","state":"Maharashtra","model":"Swift","segment":"Hatchback","units":1966,"price":5.9,"revenue":11599.4,"enquiries":5839,"testDrives":2292,"convRate":33.7,"dss":8.2,"digitalLeads":2415,"walkinLeads":3424,"exchange":520,"finPen":51.2,"accRev":20.0},{"month":"Dec","quarter":"Q3","region":"West","state":"Gujarat","model":"Brezza","segment":"SUV","units":1204,"price":11.5,"revenue":13846.0,"enquiries":4035,"testDrives":1773,"convRate":29.8,"dss":7.3,"digitalLeads":2408,"walkinLeads":1627,"exchange":358,"finPen":61.2,"accRev":19.2},{"month":"Dec","quarter":"Q3","region":"West","state":"Rajasthan","model":"Baleno","segment":"Hatchback","units":705,"price":8.1,"revenue":5710.5,"enquiries":2039,"testDrives":847,"convRate":34.6,"dss":8.9,"digitalLeads":1055,"walkinLeads":984,"exchange":107,"finPen":53.0,"accRev":6.5},{"month":"Dec","quarter":"Q3","region":"East","state":"West Bengal","model":"Dzire","segment":"Sedan","units":860,"price":7.3,"revenue":6278.0,"enquiries":2694,"testDrives":1233,"convRate":31.9,"dss":8.0,"digitalLeads":1136,"walkinLeads":1558,"exchange":193,"finPen":73.4,"accRev":7.3},{"month":"Dec","quarter":"Q3","region":"East","state":"Odisha","model":"Ertiga","segment":"MPV","units":727,"price":9.9,"revenue":7197.3,"enquiries":2066,"testDrives":884,"convRate":35.2,"dss":7.7,"digitalLeads":1109,"walkinLeads":957,"exchange":162,"finPen":72.3,"accRev":6.4},{"month":"Dec","quarter":"Q3","region":"East","state":"Bihar","model":"Baleno","segment":"Hatchback","units":1207,"price":7.9,"revenue":9535.3,"enquiries":3435,"testDrives":1399,"convRate":35.1,"dss":8.4,"digitalLeads":1750,"walkinLeads":1685,"exchange":239,"finPen":74.8,"accRev":16.1},{"month":"Jan","quarter":"Q4","region":"North","state":"Delhi","model":"Ciaz","segment":"Sedan","units":2362,"price":10.9,"revenue":25745.8,"enquiries":6777,"testDrives":3050,"convRate":34.9,"dss":9.1,"digitalLeads":3593,"walkinLeads":3184,"exchange":626,"finPen":66.6,"accRev":24.0},{"month":"Jan","quarter":"Q4","region":"North","state":"Haryana","model":"Ciaz","segment":"Sedan","units":2294,"price":11.2,"revenue":25692.8,"enquiries":6967,"testDrives":2963,"convRate":32.9,"dss":7.7,"digitalLeads":2919,"walkinLeads":4048,"exchange":490,"finPen":65.0,"accRev":26.9},{"month":"Jan","quarter":"Q4","region":"North","state":"Punjab","model":"Alto K10","segment":"Hatchback","units":2542,"price":4.7,"revenue":11947.4,"enquiries":7237,"testDrives":3352,"convRate":35.1,"dss":6.8,"digitalLeads":3034,"walkinLeads":4203,"exchange":663,"finPen":69.4,"accRev":34.5},{"month":"Jan","quarter":"Q4","region":"South","state":"Tamil Nadu","model":"Grand Vitara","segment":"SUV","units":2282,"price":15.7,"revenue":35827.4,"enquiries":6954,"testDrives":3105,"convRate":32.8,"dss":8.8,"digitalLeads":3988,"walkinLeads":2966,"exchange":589,"finPen":74.1,"accRev":32.0},{"month":"Jan","quarter":"Q4","region":"South","state":"Karnataka","model":"Grand Vitara","segment":"SUV","units":2678,"price":15.3,"revenue":40973.4,"enquiries":7897,"testDrives":3519,"convRate":33.9,"dss":7.2,"digitalLeads":3329,"walkinLeads":4568,"exchange":741,"finPen":56.0,"accRev":41.8},{"month":"Jan","quarter":"Q4","region":"South","state":"Telangana","model":"Brezza","segment":"SUV","units":707,"price":11.8,"revenue":8342.6,"enquiries":2280,"testDrives":1016,"convRate":31.0,"dss":8.6,"digitalLeads":925,"walkinLeads":1355,"exchange":135,"finPen":67.9,"accRev":12.2},{"month":"Jan","quarter":"Q4","region":"West","state":"Maharashtra","model":"Grand Vitara","segment":"SUV","units":1186,"price":15.2,"revenue":18027.2,"enquiries":3790,"testDrives":1592,"convRate":31.3,"dss":6.9,"digitalLeads":1995,"walkinLeads":1795,"exchange":183,"finPen":67.4,"accRev":12.0},{"month":"Jan","quarter":"Q4","region":"West","state":"Gujarat","model":"Dzire","segment":"Sedan","units":1244,"price":7.3,"revenue":9081.2,"enquiries":3805,"testDrives":1720,"convRate":32.7,"dss":8.8,"digitalLeads":1953,"walkinLeads":1852,"exchange":202,"finPen":46.6,"accRev":11.9},{"month":"Jan","quarter":"Q4","region":"West","state":"Rajasthan","model":"Swift","segment":"Hatchback","units":1714,"price":6.4,"revenue":10969.6,"enquiries":5330,"testDrives":2251,"convRate":32.2,"dss":8.3,"digitalLeads":2573,"walkinLeads":2757,"exchange":312,"finPen":60.4,"accRev":19.6},{"month":"Jan","quarter":"Q4","region":"East","state":"West Bengal","model":"Baleno","segment":"Hatchback","units":2593,"price":7.8,"revenue":20225.4,"enquiries":8216,"testDrives":3375,"convRate":31.6,"dss":7.2,"digitalLeads":4904,"walkinLeads":3312,"exchange":410,"finPen":51.1,"accRev":45.3},{"month":"Jan","quarter":"Q4","region":"East","state":"Odisha","model":"Alto K10","segment":"Hatchback","units":1785,"price":4.8,"revenue":8568.0,"enquiries":5407,"testDrives":2058,"convRate":33.0,"dss":8.7,"digitalLeads":2352,"walkinLeads":3055,"exchange":369,"finPen":66.1,"accRev":23.2},{"month":"Jan","quarter":"Q4","region":"East","state":"Bihar","model":"Grand Vitara","segment":"SUV","units":773,"price":15.3,"revenue":11826.9,"enquiries":2400,"testDrives":1022,"convRate":32.2,"dss":6.7,"digitalLeads":1110,"walkinLeads":1290,"exchange":165,"finPen":57.1,"accRev":11.1},{"month":"Feb","quarter":"Q4","region":"North","state":"Delhi","model":"Ertiga","segment":"MPV","units":685,"price":9.6,"revenue":6576.0,"enquiries":2381,"testDrives":945,"convRate":28.8,"dss":9.3,"digitalLeads":1171,"walkinLeads":1210,"exchange":173,"finPen":55.9,"accRev":8.5},{"month":"Feb","quarter":"Q4","region":"North","state":"Haryana","model":"Baleno","segment":"Hatchback","units":2240,"price":7.8,"revenue":17472.0,"enquiries":7093,"testDrives":2976,"convRate":31.6,"dss":7.4,"digitalLeads":3318,"walkinLeads":3775,"exchange":447,"finPen":50.0,"accRev":29.4},{"month":"Feb","quarter":"Q4","region":"North","state":"Punjab","model":"Baleno","segment":"Hatchback","units":1394,"price":8.0,"revenue":11152.0,"enquiries":4787,"testDrives":1986,"convRate":29.1,"dss":8.7,"digitalLeads":2698,"walkinLeads":2089,"exchange":379,"finPen":52.1,"accRev":13.2},{"month":"Feb","quarter":"Q4","region":"South","state":"Tamil Nadu","model":"Brezza","segment":"SUV","units":1226,"price":11.3,"revenue":13853.8,"enquiries":4085,"testDrives":1820,"convRate":30.0,"dss":7.0,"digitalLeads":2265,"walkinLeads":1820,"exchange":274,"finPen":67.6,"accRev":19.1},{"month":"Feb","quarter":"Q4","region":"South","state":"Karnataka","model":"Ciaz","segment":"Sedan","units":1923,"price":11.0,"revenue":21153.0,"enquiries":6547,"testDrives":2898,"convRate":29.4,"dss":7.0,"digitalLeads":2708,"walkinLeads":3839,"exchange":416,"finPen":54.1,"accRev":20.7},{"month":"Feb","quarter":"Q4","region":"South","state":"Telangana","model":"Swift","segment":"Hatchback","units":903,"price":6.2,"revenue":5598.6,"enquiries":2724,"testDrives":1158,"convRate":33.1,"dss":6.7,"digitalLeads":1542,"walkinLeads":1182,"exchange":145,"finPen":70.9,"accRev":14.9},{"month":"Feb","quarter":"Q4","region":"West","state":"Maharashtra","model":"Dzire","segment":"Sedan","units":768,"price":7.3,"revenue":5606.4,"enquiries":2392,"testDrives":1102,"convRate":32.1,"dss":8.5,"digitalLeads":1110,"walkinLeads":1282,"exchange":169,"finPen":49.5,"accRev":6.6},{"month":"Feb","quarter":"Q4","region":"West","state":"Gujarat","model":"Baleno","segment":"Hatchback","units":2006,"price":8.2,"revenue":16449.2,"enquiries":6996,"testDrives":2717,"convRate":28.7,"dss":8.4,"digitalLeads":2853,"walkinLeads":4143,"exchange":513,"finPen":74.7,"accRev":26.6},{"month":"Feb","quarter":"Q4","region":"West","state":"Rajasthan","model":"Alto K10","segment":"Hatchback","units":1758,"price":4.5,"revenue":7911.0,"enquiries":5399,"testDrives":2469,"convRate":32.6,"dss":8.5,"digitalLeads":2216,"walkinLeads":3183,"exchange":430,"finPen":55.0,"accRev":19.9},{"month":"Feb","quarter":"Q4","region":"East","state":"West Bengal","model":"Dzire","segment":"Sedan","units":1215,"price":7.1,"revenue":8626.5,"enquiries":3685,"testDrives":1615,"convRate":33.0,"dss":6.9,"digitalLeads":1731,"walkinLeads":1954,"exchange":358,"finPen":66.0,"accRev":14.5},{"month":"Feb","quarter":"Q4","region":"East","state":"Odisha","model":"Baleno","segment":"Hatchback","units":2142,"price":7.8,"revenue":16707.6,"enquiries":6962,"testDrives":2874,"convRate":30.8,"dss":6.9,"digitalLeads":3763,"walkinLeads":3199,"exchange":625,"finPen":74.9,"accRev":36.7},{"month":"Feb","quarter":"Q4","region":"East","state":"Bihar","model":"Baleno","segment":"Hatchback","units":2334,"price":8.1,"revenue":18905.4,"enquiries":7365,"testDrives":2812,"convRate":31.7,"dss":7.4,"digitalLeads":4347,"walkinLeads":3018,"exchange":469,"finPen":68.0,"accRev":23.2},{"month":"Mar","quarter":"Q4","region":"North","state":"Delhi","model":"Alto K10","segment":"Hatchback","units":1811,"price":4.3,"revenue":7787.3,"enquiries":6141,"testDrives":2395,"convRate":29.5,"dss":8.8,"digitalLeads":3482,"walkinLeads":2659,"exchange":511,"finPen":46.1,"accRev":20.6},{"month":"Mar","quarter":"Q4","region":"North","state":"Haryana","model":"Alto K10","segment":"Hatchback","units":1231,"price":4.7,"revenue":5785.7,"enquiries":3586,"testDrives":1660,"convRate":34.3,"dss":8.8,"digitalLeads":2014,"walkinLeads":1572,"exchange":215,"finPen":58.1,"accRev":14.9},{"month":"Mar","quarter":"Q4","region":"North","state":"Punjab","model":"Brezza","segment":"SUV","units":1767,"price":12.0,"revenue":21204.0,"enquiries":5878,"testDrives":2694,"convRate":30.1,"dss":7.2,"digitalLeads":2632,"walkinLeads":3246,"exchange":520,"finPen":68.5,"accRev":30.1},{"month":"Mar","quarter":"Q4","region":"South","state":"Tamil Nadu","model":"Brezza","segment":"SUV","units":2404,"price":11.5,"revenue":27646.0,"enquiries":7508,"testDrives":3064,"convRate":32.0,"dss":7.6,"digitalLeads":3795,"walkinLeads":3713,"exchange":709,"finPen":69.5,"accRev":38.5},{"month":"Mar","quarter":"Q4","region":"South","state":"Karnataka","model":"Alto K10","segment":"Hatchback","units":813,"price":4.9,"revenue":3983.7,"enquiries":2641,"testDrives":1234,"convRate":30.8,"dss":8.2,"digitalLeads":1110,"walkinLeads":1531,"exchange":225,"finPen":70.5,"accRev":8.8},{"month":"Mar","quarter":"Q4","region":"South","state":"Telangana","model":"Alto K10","segment":"Hatchback","units":2702,"price":4.4,"revenue":11888.8,"enquiries":7844,"testDrives":3323,"convRate":34.4,"dss":9.3,"digitalLeads":3485,"walkinLeads":4359,"exchange":588,"finPen":55.5,"accRev":22.3},{"month":"Mar","quarter":"Q4","region":"West","state":"Maharashtra","model":"Swift","segment":"Hatchback","units":2131,"price":6.2,"revenue":13212.2,"enquiries":6318,"testDrives":3029,"convRate":33.7,"dss":7.6,"digitalLeads":2562,"walkinLeads":3756,"exchange":617,"finPen":70.2,"accRev":30.9},{"month":"Mar","quarter":"Q4","region":"West","state":"Gujarat","model":"Alto K10","segment":"Hatchback","units":1775,"price":4.3,"revenue":7632.5,"enquiries":6109,"testDrives":2610,"convRate":29.1,"dss":9.0,"digitalLeads":3370,"walkinLeads":2739,"exchange":391,"finPen":63.5,"accRev":30.3},{"month":"Mar","quarter":"Q4","region":"West","state":"Rajasthan","model":"Swift","segment":"Hatchback","units":1212,"price":6.1,"revenue":7393.2,"enquiries":3859,"testDrives":1747,"convRate":31.4,"dss":8.1,"digitalLeads":1629,"walkinLeads":2230,"exchange":234,"finPen":54.0,"accRev":10.3},{"month":"Mar","quarter":"Q4","region":"East","state":"West Bengal","model":"Dzire","segment":"Sedan","units":2472,"price":7.4,"revenue":18292.8,"enquiries":7030,"testDrives":3259,"convRate":35.2,"dss":8.0,"digitalLeads":3565,"walkinLeads":3465,"exchange":605,"finPen":62.3,"accRev":37.5},{"month":"Mar","quarter":"Q4","region":"East","state":"Odisha","model":"Ertiga","segment":"MPV","units":2045,"price":9.8,"revenue":20041.0,"enquiries":6070,"testDrives":2559,"convRate":33.7,"dss":8.5,"digitalLeads":2531,"walkinLeads":3539,"exchange":605,"finPen":47.0,"accRev":27.1},{"month":"Mar","quarter":"Q4","region":"East","state":"Bihar","model":"Swift","segment":"Hatchback","units":2525,"price":6.2,"revenue":15655.0,"enquiries":7146,"testDrives":2991,"convRate":35.3,"dss":7.6,"digitalLeads":3926,"walkinLeads":3220,"exchange":513,"finPen":47.0,"accRev":26.3}];
+
+const MONTHS = ["Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"];
+const REGIONS = ["North","South","West","East"];
+const REGION_COLORS = { North:'#4d8ef0', South:'#00c9a7', West:'#f7941d', East:'#e8473f' };
+const MODELS = ["Swift","Baleno","Alto K10","Brezza","Ertiga","Grand Vitara","Dzire","Ciaz"];
+const MODEL_COLORS = ['#4d8ef0','#00c9a7','#f7941d','#e8473f','#9b59b6','#f1c40f','#1abc9c','#e67e22'];
+
+let charts = {};
+let filteredData = [...RAW];
+
+function getFilters() {
+  return {
+    region: document.getElementById('fRegion').value,
+    quarter: document.getElementById('fQuarter').value,
+    model: document.getElementById('fModel').value,
+    segment: document.getElementById('fSegment').value
+  };
+}
+
+function filterData() {
+  const f = getFilters();
+  filteredData = RAW.filter(d =>
+    (f.region === 'All' || d.region === f.region) &&
+    (f.quarter === 'All' || d.quarter === f.quarter) &&
+    (f.model === 'All' || d.model === f.model) &&
+    (f.segment === 'All' || d.segment === f.segment)
+  );
+}
+
+function applyFilters() {
+  filterData();
+  updateAll();
+}
+
+function resetFilters() {
+  ['fRegion','fQuarter','fModel','fSegment'].forEach(id => document.getElementById(id).value = 'All');
+  applyFilters();
+}
+
+function fmt(n) {
+  if (n >= 100000) return (n/100000).toFixed(1)+'L';
+  if (n >= 1000) return (n/1000).toFixed(1)+'K';
+  return Math.round(n).toLocaleString();
+}
+function fmtRev(n) {
+  if (n >= 100000) return '₹'+(n/100000).toFixed(1)+'L Cr';
+  if (n >= 1000) return '₹'+(n/1000).toFixed(0)+'K';
+  return '₹'+Math.round(n);
+}
+
+function updateKPIs() {
+  const d = filteredData;
+  const totalUnits = d.reduce((s,r)=>s+r.units,0);
+  const totalRev = d.reduce((s,r)=>s+r.revenue,0);
+  const avgConv = d.reduce((s,r)=>s+r.convRate,0)/d.length;
+  const avgDSS = d.reduce((s,r)=>s+r.dss,0)/d.length;
+  const totalEnq = d.reduce((s,r)=>s+r.enquiries,0);
+  const avgFin = d.reduce((s,r)=>s+r.finPen,0)/d.length;
+
+  const regionUnits = {};
+  REGIONS.forEach(r => { regionUnits[r] = d.filter(x=>x.region===r).reduce((s,x)=>s+x.units,0); });
+  const bestRegion = Object.entries(regionUnits).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('kTotalUnits').textContent = fmt(totalUnits);
+  document.getElementById('kUnitsAvg').textContent = `Avg ${Math.round(totalUnits/Math.max(d.length,1)).toLocaleString()} per record`;
+  document.getElementById('kRevenue').textContent = '₹'+fmt(totalRev);
+  document.getElementById('kConvRate').textContent = avgConv.toFixed(1)+'%';
+  document.getElementById('kDSS').textContent = avgDSS.toFixed(1);
+  document.getElementById('kEnquiries').textContent = fmt(totalEnq);
+  document.getElementById('kFinPen').textContent = avgFin.toFixed(1)+'%';
+  document.getElementById('kBestRegion').textContent = bestRegion ? bestRegion[0] : '—';
+  document.getElementById('kBestRegionSub').textContent = bestRegion ? fmt(bestRegion[1])+' units' : '';
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function updateTrendChart() {
+  destroyChart('trend');
+  const ctx = document.getElementById('chartTrend').getContext('2d');
+  const datasets = REGIONS.map(region => {
+    const data = MONTHS.map(m => {
+      const rows = filteredData.filter(d=>d.month===m && d.region===region);
+      return rows.reduce((s,r)=>s+r.units,0);
+    });
+    return {
+      label: region,
+      data,
+      borderColor: REGION_COLORS[region],
+      backgroundColor: REGION_COLORS[region]+'22',
+      tension: 0.4,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: false,
+      borderWidth: 2
+    };
+  });
+  charts['trend'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: MONTHS, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color:'#8b949e', font:{size:10}, boxWidth:12 } } },
+      scales: {
+        x: { ticks:{color:'#8b949e',font:{size:10}}, grid:{color:'#21262d'} },
+        y: { ticks:{color:'#8b949e',font:{size:10},callback:v=>fmt(v)}, grid:{color:'#21262d'} }
+      }
+    }
+  });
+}
+
+function updateDonutChart() {
+  destroyChart('donut');
+  const ctx = document.getElementById('chartDonut').getContext('2d');
+  const revByModel = MODELS.map(m => filteredData.filter(d=>d.model===m).reduce((s,r)=>s+r.revenue,0));
+  charts['donut'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: MODELS,
+      datasets: [{ data: revByModel, backgroundColor: MODEL_COLORS, borderColor: '#0d1117', borderWidth: 2, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position:'right', labels:{color:'#8b949e',font:{size:9},boxWidth:10,padding:6} },
+        tooltip: { callbacks: { label: ctx => ` ₹${fmt(ctx.parsed)} L` } }
+      }
+    }
+  });
+}
+
+function updateFunnel() {
+  const d = filteredData;
+  const totalEnq = d.reduce((s,r)=>s+r.enquiries,0);
+  const totalTD  = d.reduce((s,r)=>s+r.testDrives,0);
+  const totalUnits = d.reduce((s,r)=>s+r.units,0);
+  const steps = [
+    { label:'Enquiries', val:totalEnq, color:'#4d8ef0', pct:100 },
+    { label:'Test Drives', val:totalTD, color:'#00c9a7', pct:(totalTD/Math.max(totalEnq,1)*100).toFixed(1) },
+    { label:'Sales', val:totalUnits, color:'#f7941d', pct:(totalUnits/Math.max(totalEnq,1)*100).toFixed(1) }
+  ];
+  const maxVal = totalEnq;
+  let html = '';
+  steps.forEach((s,i) => {
+    const w = Math.max((s.val/Math.max(maxVal,1))*100, 5);
+    html += `
+      <div class="funnel-step">
+        <div class="funnel-label">${s.label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${w}%;background:${s.color}">
+            <span class="funnel-val">${fmt(s.val)}</span>
+          </div>
+        </div>
+        <span class="funnel-pct">${s.pct}%</span>
+      </div>
+      ${i<steps.length-1?'<div class="funnel-arrow">▼</div>':''}
+    `;
+  });
+  // Conversion rate highlight
+  const convRate = (totalUnits/Math.max(totalEnq,1)*100).toFixed(1);
+  html += `<div style="margin-top:12px;background:#1c2128;border-radius:6px;padding:10px;text-align:center">
+    <div style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.5px">Overall Conversion Rate</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:#f7941d">${convRate}%</div>
+  </div>`;
+  document.getElementById('funnelContainer').innerHTML = html;
+}
+
+function updateDSS() {
+  const html = REGIONS.map(region => {
+    const rows = filteredData.filter(d=>d.region===region);
+    const avg = rows.length ? (rows.reduce((s,r)=>s+r.dss,0)/rows.length).toFixed(1) : 0;
+    const pct = (avg/10)*100;
+    const color = avg >= 8 ? '#00c9a7' : avg >= 7 ? '#f7941d' : '#e8473f';
+    return `
+      <div class="dss-meter">
+        <div class="dss-region" style="color:${REGION_COLORS[region]};font-weight:600;font-size:11px">${region}</div>
+        <div class="dss-track">
+          <div class="dss-fill" style="width:${pct}%;background:${color}">
+            <span class="dss-score">${avg}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Worst DSS month
+  const monthDSS = MONTHS.map(m => {
+    const rows = filteredData.filter(d=>d.month===m);
+    return { month:m, avg: rows.length ? rows.reduce((s,r)=>s+r.dss,0)/rows.length : 0 };
+  }).filter(x=>x.avg>0);
+  const worst = monthDSS.sort((a,b)=>a.avg-b.avg)[0];
+
+  const extra = worst ? `
+    <div style="margin-top:12px;background:#1c2128;border-radius:6px;padding:8px 10px">
+      <div style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.4px">Worst DSS Month</div>
+      <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#e8473f">${worst.month} — ${worst.avg.toFixed(1)}/10</div>
+      <div style="font-size:10px;color:#8b949e">⚠ Review dealer feedback for this period</div>
+    </div>
+  ` : '';
+
+  document.getElementById('dssContainer').innerHTML = html + extra;
+}
+
+function updateLeadsChart() {
+  destroyChart('leads');
+  const ctx = document.getElementById('chartLeads').getContext('2d');
+  const digital = MONTHS.map(m => filteredData.filter(d=>d.month===m).reduce((s,r)=>s+r.digitalLeads,0));
+  const walkin  = MONTHS.map(m => filteredData.filter(d=>d.month===m).reduce((s,r)=>s+r.walkinLeads,0));
+  charts['leads'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MONTHS,
+      datasets: [
+        { label:'Digital Leads', data:digital, backgroundColor:'#4d8ef0cc', borderRadius:3 },
+        { label:'Walk-in Leads', data:walkin,  backgroundColor:'#f7941dcc', borderRadius:3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{ labels:{color:'#8b949e',font:{size:10},boxWidth:10} } },
+      scales: {
+        x: { stacked:true, ticks:{color:'#8b949e',font:{size:9}}, grid:{color:'#21262d'} },
+        y: { stacked:true, ticks:{color:'#8b949e',font:{size:9},callback:v=>fmt(v)}, grid:{color:'#21262d'} }
+      }
+    }
+  });
+}
+
+function updateRegionRevChart() {
+  destroyChart('regionRev');
+  const ctx = document.getElementById('chartRegionRev').getContext('2d');
+  const revByRegion = REGIONS.map(r => filteredData.filter(d=>d.region===r).reduce((s,x)=>s+x.revenue,0));
+  charts['regionRev'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: REGIONS,
+      datasets: [{
+        label:'Revenue (₹L)',
+        data: revByRegion,
+        backgroundColor: REGIONS.map(r=>REGION_COLORS[r]+'cc'),
+        borderColor: REGIONS.map(r=>REGION_COLORS[r]),
+        borderWidth: 1, borderRadius: 4
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{color:'#8b949e',font:{size:9},callback:v=>fmt(v)}, grid:{color:'#21262d'} },
+        y:{ ticks:{color:'#8b949e',font:{size:10}}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function updateSegmentBars() {
+  const segs = ['Hatchback','SUV','MPV','Sedan'];
+  const segColors = {'Hatchback':'#4d8ef0','SUV':'#00c9a7','MPV':'#f7941d','Sedan':'#e8473f'};
+  const units = segs.map(s => filteredData.filter(d=>d.segment===s).reduce((a,r)=>a+r.units,0));
+  const maxU = Math.max(...units,1);
+  const html = segs.map((s,i) => `
+    <div class="seg-row">
+      <div class="seg-name">${s}</div>
+      <div class="seg-track">
+        <div class="seg-fill" style="width:${(units[i]/maxU*100).toFixed(1)}%;background:${segColors[s]}"></div>
+      </div>
+      <div class="seg-val" style="color:${segColors[s]}">${fmt(units[i])}</div>
+    </div>
+  `).join('');
+  document.getElementById('segContainer').innerHTML = html;
+}
+
+function updateFinPenChart() {
+  destroyChart('finPen');
+  const ctx = document.getElementById('chartFinPen').getContext('2d');
+  const data = MONTHS.map(m => {
+    const rows = filteredData.filter(d=>d.month===m);
+    return rows.length ? (rows.reduce((s,r)=>s+r.finPen,0)/rows.length).toFixed(1) : 0;
+  });
+  charts['finPen'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MONTHS,
+      datasets:[{
+        label:'Finance Pen %',
+        data, borderColor:'#9b59b6', backgroundColor:'#9b59b620',
+        tension:0.4, pointRadius:3, fill:true, borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'#21262d'}},
+        y:{ticks:{color:'#8b949e',font:{size:9},callback:v=>v+'%'},grid:{color:'#21262d'},min:40,max:80}
+      }
+    }
+  });
+}
+
+function updateTable() {
+  const stateRev = {};
+  filteredData.forEach(d => { stateRev[d.state] = (stateRev[d.state]||0)+d.revenue; });
+  const sorted = Object.entries(stateRev).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxRev = sorted[0]?.[1]||1;
+  const regionOf = s => filteredData.find(d=>d.state===s)?.region||'';
+
+  let html = `<table class="data-table">
+    <thead><tr><th>#</th><th>State</th><th>Revenue ₹L</th><th>% Share</th></tr></thead><tbody>`;
+  sorted.forEach(([state,rev],i) => {
+    const reg = regionOf(state);
+    const pct = (rev/filteredData.reduce((s,r)=>s+r.revenue,0)*100).toFixed(1);
+    const barW = (rev/maxRev*80).toFixed(0);
+    const color = REGION_COLORS[reg]||'#4d8ef0';
+    html += `<tr>
+      <td style="color:#8b949e">${i+1}</td>
+      <td><span style="color:${color};font-weight:600">${state}</span></td>
+      <td>
+        <div class="mini-bar-wrap">
+          <div class="mini-bar" style="width:${barW}px;background:${color};flex-shrink:0"></div>
+          <span style="font-size:10px">${fmt(rev)}</span>
+        </div>
+      </td>
+      <td style="color:#8b949e">${pct}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('tableContainer').innerHTML = html;
+}
+
+function updateInsights() {
+  const d = filteredData;
+  if (!d.length) return;
+
+  // Compute key insights dynamically
+  const regionUnits = {};
+  REGIONS.forEach(r => regionUnits[r] = d.filter(x=>x.region===r).reduce((s,x)=>s+x.units,0));
+  const sortedRegions = Object.entries(regionUnits).sort((a,b)=>b[1]-a[1]);
+  const best = sortedRegions[0], worst = sortedRegions[sortedRegions.length-1];
+
+  const dssBelow7 = d.filter(x=>x.dss<7.0);
+  const dssWarnCount = dssBelow7.length;
+
+  const modelRev = {};
+  MODELS.forEach(m => modelRev[m] = d.filter(x=>x.model===m).reduce((s,x)=>s+x.revenue,0));
+  const topModel = Object.entries(modelRev).sort((a,b)=>b[1]-a[1])[0];
+
+  const totalDig = d.reduce((s,r)=>s+r.digitalLeads,0);
+  const totalWalk = d.reduce((s,r)=>s+r.walkinLeads,0);
+  const digPct = (totalDig/(totalDig+totalWalk)*100).toFixed(0);
+
+  const avgConv = (d.reduce((s,r)=>s+r.convRate,0)/d.length).toFixed(1);
+  const avgFin = (d.reduce((s,r)=>s+r.finPen,0)/d.length).toFixed(1);
+
+  const insights = [
+    {
+      icon:'🏆',
+      title:`${best[0]} leads in Units Sold`,
+      text:`${best[0]} region recorded the highest unit sales (${fmt(best[1])} units). Focus incremental inventory and dealer incentives here to maximize throughput. ${worst[0]} (${fmt(worst[1])}) needs a regional sales review.`
+    },
+    {
+      icon:'⚠️',
+      title:`${dssWarnCount} records with DSS below 7.0`,
+      text:`${dssWarnCount} out of ${d.length} dealer-month records show satisfaction below 7.0/10. Immediate dealer health checks and resolution of operational grievances is recommended to prevent churn.`
+    },
+    {
+      icon:'💰',
+      title:`${topModel[0]} drives the highest revenue`,
+      text:`${topModel[0]} contributes ₹${fmt(topModel[1])} in revenue — the top revenue-generating model in current selection. Ensure stock availability and promotional budgets are aligned to this model.`
+    },
+    {
+      icon:'📱',
+      title:`${digPct}% of leads are digital`,
+      text:`${digPct}% of all leads now originate from digital channels. With avg conversion at ${avgConv}%, the digital lead nurturing pipeline needs improvement. Consider automated follow-ups within 2 hours of enquiry.`
+    }
+  ];
+
+  document.getElementById('insightsContainer').innerHTML = insights.map(ins => `
+    <div class="insight-card">
+      <div class="insight-icon">${ins.icon}</div>
+      <div class="insight-text"><strong>${ins.title}</strong>${ins.text}</div>
+    </div>
+  `).join('');
+}
+
+function updateAll() {
+  updateKPIs();
+  updateTrendChart();
+  updateDonutChart();
+  updateFunnel();
+  updateDSS();
+  updateLeadsChart();
+  updateRegionRevChart();
+  updateSegmentBars();
+  updateFinPenChart();
+  updateTable();
+  updateInsights();
+}
+
+// Init
+updateAll();
+</script>
+</body>
+</html>
